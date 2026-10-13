@@ -13,7 +13,15 @@ class DealConfig:
             'min_discount': 60,
             'smart_discount_threshold': 40,
             'target_categories': ['Electronics', 'Home Appliances', 'Kitchen'],
-            'scan_interval_minutes': 15
+            'scan_interval_minutes': 15,
+            'email_user': os.getenv('EMAIL_USER', ''),
+            'email_pass': os.getenv('EMAIL_PASS', ''),
+            'email_receiver': os.getenv('EMAIL_RECEIVER', ''),
+            'dynamic_thresholds': [
+                {'min_price': 1000, 'discount': 20},  # High value: 20% is enough
+                {'min_price': 500, 'discount': 30},   # Mid value: 30%
+                {'min_price': 0, 'discount': 60}      # Low value: 60%
+            ]
         }
         self.load_or_create_config()
 

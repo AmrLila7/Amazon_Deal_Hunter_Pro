@@ -1,20 +1,36 @@
 import asyncio
 import re
 import random
+import argparse
 from playwright.async_api import async_playwright
 from config import DealConfig
 from agents.notifier.notifier_agent import TelegramNotifier
 
 class ScoutAgent:
-    def __init__(self):
+    def __init__(self, category=None):
         self.config = DealConfig()
         self.min_discount = self.config.current_config.get('min_discount', 60)
         self.smart_threshold = self.config.current_config.get('smart_discount_threshold', 40)
         self.notifier = TelegramNotifier()
-        self.categories = self.config.current_config.get('target_categories', ['Electronics'])
+        self.categories = [category] if category else self.config.current_config.get('target_categories', ['Electronics'])
+        self.dynamic_thresholds = self.config.current_config.get('dynamic_thresholds', [
+            {'min_price': 1000, 'discount': 20},
+            {'min_price': 500, 'discount': 30},
+            {'min_price': 0, 'discount': 60}
+        ])
 
     async def _get_random_delay(self, min_s=2, max_s=5):
         await asyncio.sleep(random.uniform(min_s, max_s))
+
+    def _calculate_required_discount(self, price_str):
+        try:
+            price = float(re.sub(r'[^0-9.]', '', price_str))
+            for threshold in self.dynamic_thresholds:
+                if price >= threshold['min_price']:
+                    return threshold['discount']
+        except:
+            pass
+        return self.min_discount
 
     async def scan_amazon_deals(self):
         print(f'🔎 [Pro-Scout] Hunting in categories: {self.categories}...')
@@ -52,20 +68,16 @@ class ScoutAgent:
                             discount = int(discount_match.group(1)) if discount_match else 0
                             
                             link_el = await element.query_selector('a')
-                            href = await link_el.get_attribute('href') if link_el else ''
+                            href = await link_el.get_//attribute('href') if link_el else ''
                             link = 'https://www.amazon.eg' + href if href.startswith('/') else href
                             
-                            if discount >= self.min_discount:
+                            required_discount = self._calculate_required_discount(price)
+                            
+                            if discount >= required_discount:
                                 found_deals.append({
                                     'product_name': name, 'new_price': price, 
                                     'old_price': 'Check Link', 'discount': discount, 
-                                    'link': link, 'type': '🔥 MEGA DEAL'
-                                })
-                            elif discount >= self.smart_threshold:
-                                found_deals.append({
-                                    'product_name': name, 'new_price': price, 
-                                    'old_price': 'Check Link', 'discount': discount, 
-                                    'link': link, 'type': '✨ SMART DEAL'
+                                    'link': link, 'type': '🔥 SMART DEAL' if discount < 60 else '🚀 MEGA DEAL'
                                 })
                             await self._get_random_delay(0.1, 0.5)
                         except Exception: continue
@@ -92,7 +104,7 @@ class ScoutAgent:
             res = await self.notifier.send_deal_alert(
                 f"{deal['type']} | {deal['product_name']}", 
                 deal['old_price'], 
-                deal['new_//price'], 
+                deal['new_price'], 
                 deal['discount'], 
                 deal['link']
             )
@@ -101,5 +113,11 @@ class ScoutAgent:
 
 if __name__ == '__main__':
     import asyncio
-    scout = ScoutAgent()
-    asyncio.run(scout.process_and_notify())
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--category', type=str, help='Specific category to scan')
+    args = parser.parse_args()
+    
+    scout = ScoutAgent(category=args.category)
+    result = asyncio.run(scout.process_and_notify())
+    print(f"\nRESULT: {result}")

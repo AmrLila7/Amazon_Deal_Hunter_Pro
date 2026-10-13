@@ -126,8 +126,18 @@ def run():
     # connect to the telegram bot
     bot = telegram.Bot(token=os.environ.get("AMAZON_DEALS_TG_BOT_TOKEN"))
 
-    selected_product_info, already_sent_product_ids = get_random_product_info(deals_ids, already_sent_product_ids)
-    send_deal(bot, selected_product_info, chat_id=os.environ.get("AMAZON_DEALS_TG_CHANNEL_ID"))
+    result = get_random_product_info(deals_ids, already_sent_product_ids)
+    if result is None:
+        print("No valid products found to send. Skipping this run.")
+        return
+
+    selected_product_info, already_sent_product_ids = result
+    chat_id = os.environ.get("AMAZON_DEALS_TG_CHANNEL_ID")
+    if not chat_id:
+        print("Error: AMAZON_DEALS_TG_CHANNEL_ID is not set in environment variables.")
+        return
+
+    send_deal(bot, selected_product_info, chat_id=chat_id)
 
     # save deals collection time, the ids of new deals and the ids of the already sent products in a json file
     new_deals_dict = {"collection_time": collection_time,
