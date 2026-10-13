@@ -1,0 +1,12 @@
+{
+    "telegram_token": "8758371498:AAFao6JI2lhYghYavwSrDvssCs2JJDqXLnU",
+    "chat_id": "1519490939",
+    "min_discount": 50,
+    "smart_discount_threshold": 40,
+    "target_categories": [
+        "Electronics",
+        "Home Appliances",
+        "Kitchen"
+    ],
+    "scan_interval_minutes": 15
+}
